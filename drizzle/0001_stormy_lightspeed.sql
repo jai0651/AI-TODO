@@ -1,1 +1,0 @@
-ALTER TABLE "todos" ALTER COLUMN "id" SET DATA TYPE integer;

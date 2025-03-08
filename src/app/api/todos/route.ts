@@ -1,25 +1,46 @@
 import { NextResponse } from 'next/server';
+import { getServerSession } from 'next-auth';
+import { authOptions } from '@/lib/auth';
 import { db } from '@/db';
 import { todos } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { eq, desc } from 'drizzle-orm';
 
+// GET /api/todos - Get all todos for the current user
 export async function GET() {
-  try {
-    const allTodos = await db.select().from(todos);
-    return NextResponse.json(allTodos);
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to fetch todos' }, { status: 500 });
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user) {
+    return new NextResponse("Unauthorized", { status: 401 });
   }
+
+  const userTodos = await db.query.todos.findMany({
+    where: eq(todos.userId, session.user.id),
+    orderBy: (todos, { desc }) => [desc(todos.createdAt)],
+  });
+
+  return NextResponse.json(userTodos);
 }
 
-export async function POST(request: Request) {
-  try {
-    const { text } = await request.json();
-    const [newTodo] = await db.insert(todos).values({ text }).returning();
-    return NextResponse.json(newTodo);
-  } catch (error) {
-    return NextResponse.json({ error: 'Failed to create todo' }, { status: 500 });
+// POST /api/todos - Create a new todo
+export async function POST(req: Request) {
+  const session = await getServerSession(authOptions);
+
+  if (!session?.user) {
+    return new NextResponse("Unauthorized", { status: 401 });
   }
+
+  const { title } = await req.json();
+
+  if (!title) {
+    return new NextResponse("Title is required", { status: 400 });
+  }
+
+  const newTodo = await db.insert(todos).values({
+    userId: session.user.id,
+    title,
+  }).returning();
+
+  return NextResponse.json(newTodo[0]);
 }
 
 export async function PUT(request: Request) {

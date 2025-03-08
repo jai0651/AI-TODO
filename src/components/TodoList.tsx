@@ -1,135 +1,206 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useTodo } from '@/context/TodoContext';
+import { useState, useEffect, memo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Todo } from "@/db/schema";
+import { create } from 'zustand';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
-interface Todo {
-  id: number;
-  text: string;
-  completed: number;
+interface TodoStore {
+  todos: Todo[];
+  isLoading: boolean;
+  error: string | null;
+  fetchTodos: () => Promise<void>;
+  addTodo: (title: string) => Promise<void>;
+  toggleTodo: (todo: Todo) => Promise<void>;
+  deleteTodo: (id: string) => Promise<void>;
 }
 
-export function TodoList() {
-  const { todos, isLoading, addTodo, deleteTodo, toggleTodo } = useTodo();
-  const [newTodo, setNewTodo] = useState('');
+export const useTodoStore = create<TodoStore>((set, get) => ({
+  todos: [],
+  isLoading: true,
+  error: null,
+  fetchTodos: async () => {
+    try {
+      const response = await fetch("/api/todos");
+      if (!response.ok) throw new Error("Failed to fetch todos");
+      const data = await response.json();
+      set({ todos: data, isLoading: false });
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : "Failed to load todos", isLoading: false });
+    }
+  },
+  addTodo: async (title: string) => {
+    try {
+      const response = await fetch("/api/todos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title }),
+      });
 
-  const handleSubmit = async (e: React.FormEvent) => {
+      if (!response.ok) throw new Error("Failed to add todo");
+
+      const addedTodo = await response.json();
+      set(state => ({ todos: [addedTodo, ...state.todos], error: null }));
+    } catch (err) {
+      set({ error: err instanceof Error ? err.message : "Failed to add todo" });
+    }
+  },
+  toggleTodo: async (todo: Todo) => {
+    const optimisticTodos = get().todos.map(t => 
+      t.id === todo.id ? { ...t, completed: !t.completed } : t
+    );
+    set({ todos: optimisticTodos });
+
+    try {
+      const response = await fetch(`/api/todos/${todo.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ completed: !todo.completed }),
+      });
+
+      if (!response.ok) throw new Error("Failed to update todo");
+      const updatedTodo = await response.json();
+      set(state => ({
+        todos: state.todos.map(t => t.id === updatedTodo.id ? updatedTodo : t),
+        error: null
+      }));
+    } catch (err) {
+      set(state => ({ 
+        todos: state.todos.map(t => t.id === todo.id ? todo : t),
+        error: err instanceof Error ? err.message : "Failed to update todo" 
+      }));
+    }
+  },
+  deleteTodo: async (id: string) => {
+    const previousTodos = get().todos;
+    set(state => ({ todos: state.todos.filter(todo => todo.id !== id) }));
+
+    try {
+      const response = await fetch(`/api/todos/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!response.ok) throw new Error("Failed to delete todo");
+    } catch (err) {
+      set({ 
+        todos: previousTodos,
+        error: err instanceof Error ? err.message : "Failed to delete todo" 
+      });
+    }
+  },
+}));
+
+// Memoized TodoItem component
+const TodoItem = memo(({ todo, onToggle, onDelete }: { 
+  todo: Todo; 
+  onToggle: (todo: Todo) => void; 
+  onDelete: (id: string) => void;
+}) => (
+  <motion.div
+    layout
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, x: -100 }}
+    className="flex items-center gap-3 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700"
+  >
+    <input
+      type="checkbox"
+      checked={todo.completed}
+      onChange={() => onToggle(todo)}
+      className="w-5 h-5 rounded border-gray-300 text-purple-600 focus:ring-purple-500 dark:border-gray-600 dark:bg-gray-700"
+    />
+    <span className={`flex-1 text-gray-800 dark:text-gray-200 ${todo.completed ? 'line-through text-gray-400 dark:text-gray-500' : ''}`}>
+      {todo.title}
+    </span>
+    <motion.button
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.9 }}
+      onClick={() => onDelete(todo.id)}
+      className="text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 focus:outline-none"
+    >
+      ✕
+    </motion.button>
+  </motion.div>
+));
+
+TodoItem.displayName = 'TodoItem';
+
+export function TodoList() {
+  const todos = useTodoStore(state => state.todos);
+  const isLoading = useTodoStore(state => state.isLoading);
+  const error = useTodoStore(state => state.error);
+  const { fetchTodos, addTodo, toggleTodo, deleteTodo } = useTodoStore();
+  const [newTodo, setNewTodo] = useState("");
+
+  // Fetch todos on component mount
+  useEffect(() => {
+    fetchTodos();
+  }, [fetchTodos]);
+
+  const handleAddTodo = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTodo.trim()) return;
-    await addTodo(newTodo.trim());
-    setNewTodo('');
+    await addTodo(newTodo);
+    setNewTodo("");
   };
 
-  if (isLoading && todos.length === 0) {
+  if (isLoading) {
     return (
-      <div className="flex justify-center items-center p-8">
-        <motion.div
-          animate={{
-            scale: [1, 1.2, 1],
-            rotate: [0, 180, 360],
-          }}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-          className="w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full"
-        />
+      <div className="flex justify-center py-4">
+        <div className="w-6 h-6 border-2 border-purple-500 border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <form onSubmit={handleSubmit} className="flex gap-2">
+    <div className="space-y-4">
+      <form onSubmit={handleAddTodo} className="flex gap-2">
         <input
           type="text"
           value={newTodo}
           onChange={(e) => setNewTodo(e.target.value)}
           placeholder="Add a new task..."
-          className="flex-1 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-400"
+          className="flex-1 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2 focus:outline-none focus:border-purple-500 dark:focus:border-purple-400 dark:text-white transition-colors"
         />
         <motion.button
-          whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.98 }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
           type="submit"
-          className="px-6 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg font-medium shadow-sm hover:shadow transition-all duration-200"
+          className="px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-500 text-white rounded-lg hover:from-purple-700 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 dark:focus:ring-offset-gray-800"
         >
           Add
         </motion.button>
       </form>
 
+      {error && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="p-3 rounded-lg bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 text-sm"
+        >
+          {error}
+        </motion.div>
+      )}
+
       <AnimatePresence mode="popLayout">
-        <div className="space-y-4">
-          {todos.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center p-8 text-gray-500 dark:text-gray-400"
-            >
-              <p className="text-6xl mb-4">📝</p>
-              <p className="text-lg">No tasks yet. Add your first task!</p>
-            </motion.div>
-          ) : (
-            todos.map((todo: Todo, index: number) => (
-              <motion.div
-                layout
-                key={todo.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, x: -100 }}
-                transition={{
-                  duration: 0.2,
-                  delay: index * 0.05,
-                  layout: { duration: 0.2 }
-                }}
-                className="group bg-white dark:bg-gray-700 p-4 rounded-xl shadow-sm hover:shadow-md transition-all duration-200"
-              >
-                <div className="flex items-center justify-between gap-4">
-                  <motion.button
-                    layout="position"
-                    onClick={() => toggleTodo(todo.id)}
-                    className="flex items-center gap-3 flex-1"
-                  >
-                    <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center
-                      ${todo.completed 
-                        ? 'border-purple-500 bg-purple-500' 
-                        : 'border-gray-300 dark:border-gray-500'}`}
-                    >
-                      {todo.completed ? (
-                        <motion.svg 
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          className="w-3 h-3 text-white"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </motion.svg>
-                      ) : null}
-                    </div>
-                    <span className={`text-gray-800 dark:text-gray-200 ${
-                      todo.completed ? 'line-through text-gray-500 dark:text-gray-400' : ''
-                    }`}>
-                      {todo.text}
-                    </span>
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => deleteTodo(todo.id)}
-                    className="opacity-0 group-hover:opacity-100 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm flex items-center gap-2"
-                  >
-                    <span>Delete</span>
-                    <span className="text-sm">🗑️</span>
-                  </motion.button>
-                </div>
-              </motion.div>
-            ))
-          )}
+        <div className="space-y-2">
+          {todos.map(todo => (
+            <TodoItem
+              key={todo.id}
+              todo={todo}
+              onToggle={toggleTodo}
+              onDelete={deleteTodo}
+            />
+          ))}
         </div>
       </AnimatePresence>
+
+      {todos.length === 0 && !isLoading && (
+        <p className="text-center text-gray-500 dark:text-gray-400">
+          No tasks yet. Add one above!
+        </p>
+      )}
     </div>
   );
 } 
