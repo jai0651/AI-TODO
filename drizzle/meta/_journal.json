@@ -1,0 +1,20 @@
+{
+  "version": "5",
+  "dialect": "pg",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1741439225495,
+      "tag": "0000_chilly_valeria_richards",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1741439792571,
+      "tag": "0001_stormy_lightspeed",
+      "breakpoints": true
+    }
+  ]
+}
