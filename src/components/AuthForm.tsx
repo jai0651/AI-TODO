@@ -38,37 +38,54 @@ export function AuthForm({ mode }: AuthFormProps) {
         if (!res.ok) {
           throw new Error(data.error || "Failed to sign up");
         }
-
+        
+        // Add a small delay before login attempt
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
         // After successful signup, log them in
         const result = await signIn("credentials", {
+          redirect: false,
           email,
           password,
-          redirect: false,
           callbackUrl: "/dashboard"
         });
 
         if (result?.error) {
-          throw new Error("Login failed after signup: " + result.error);
+          // If login fails after signup, redirect to login page
+          setError("Account created successfully. Please login with your credentials.");
+          setTimeout(() => {
+            router.push("/login");
+          }, 2000);
+          return;
         }
 
         router.replace("/dashboard");
       } else {
         // Login
         const result = await signIn("credentials", {
+          redirect: false,
           email,
           password,
-          redirect: false,
           callbackUrl: "/dashboard"
         });
 
-        if (result?.error) {
-          throw new Error(result.error);
+        if (!result) {
+          throw new Error("Login failed - no response from server");
         }
 
-        router.replace("/dashboard");
+        if (result.error) {
+          throw new Error(result.error === "CredentialsSignin" 
+            ? "Invalid email or password" 
+            : result.error);
+        }
+
+        if (result.ok) {
+          await router.replace("/dashboard");
+        } else {
+          throw new Error("Login failed - unexpected response");
+        }
       }
     } catch (err) {
-      console.error("Auth error:", err);
       setError(err instanceof Error ? err.message : "An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
