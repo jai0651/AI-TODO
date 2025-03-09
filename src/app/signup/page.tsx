@@ -1,12 +1,16 @@
 "use client";
 
 import { AuthForm } from "@/components/AuthForm";
+import { AppPreview } from "@/components/AppPreview";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
+import { Sparkles } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
-export default function SignupPage() {
+export default function SignUpPage() {
   const { theme, systemTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
@@ -22,57 +26,84 @@ export default function SignupPage() {
   const isDarkMode = currentTheme === 'dark';
 
   return (
-    <div className={`min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800 ${isDarkMode ? 'dark' : ''}`}>
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-400/20 to-blue-400/20 dark:from-purple-900/30 dark:to-blue-900/30" />
-      
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="relative z-10 w-full max-w-md px-4"
-      >
-        <div className="text-center mb-8">
-          <motion.h1 
-            initial={{ opacity: 0, y: -20 }}
+    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-background">
+      {/* Navigation */}
+      <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-sm border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <Link href="/" className="flex items-center">
+              <Sparkles className="w-6 h-6 text-primary" />
+              <span className="ml-2 text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-blue-400 dark:from-purple-300 dark:to-blue-300">AI Todo</span>
+            </Link>
+            <div className="flex items-center gap-4">
+              <ThemeToggle />
+              <Link href="/login">
+                <Button variant="outline" className="font-medium">
+                  Login
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </nav>
+
+      {/* Sign Up Form Side */}
+      <div className="w-full lg:w-[45%] min-h-screen flex items-center justify-center bg-background/50 backdrop-blur-sm p-8 pt-24 lg:pt-8">
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.5 }}
+          className="w-full max-w-md"
+        >
+          <div className="text-center mb-8">
+            <motion.h1 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-blue-400 dark:from-purple-300 dark:to-blue-300"
+            >
+              Create Account
+            </motion.h1>
+            <motion.p 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="mt-2 text-muted-foreground"
+            >
+              Join us to start managing tasks with AI
+            </motion.p>
+          </div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-500 dark:from-purple-400 dark:to-blue-400"
+            transition={{ delay: 0.4 }}
+            className="bg-card/50 backdrop-blur-xl border border-border/50 rounded-xl p-6 shadow-lg dark:shadow-slate-900/50"
           >
-            Create Account
-          </motion.h1>
+            <AuthForm mode="signup" />
+          </motion.div>
+
           <motion.p 
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.3 }}
-            className="mt-2 text-gray-600 dark:text-gray-400"
+            transition={{ delay: 0.5 }}
+            className="mt-6 text-center text-sm text-muted-foreground"
           >
-            Join us to manage your tasks efficiently
+            Already have an account?{" "}
+            <Link 
+              href="/login" 
+              className="font-medium text-primary hover:text-primary/90 transition-colors"
+            >
+              Sign in
+            </Link>
           </motion.p>
-        </div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-        >
-          <AuthForm mode="signup" />
         </motion.div>
+      </div>
 
-        <motion.p 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400"
-        >
-          Already have an account?{" "}
-          <Link 
-            href="/login" 
-            className="font-medium text-purple-600 hover:text-purple-500 dark:text-purple-400 dark:hover:text-purple-300 transition-colors"
-          >
-            Sign in
-          </Link>
-        </motion.p>
-      </motion.div>
+      {/* Preview Side */}
+      <div className="hidden lg:block lg:w-[55%] relative overflow-hidden bg-muted/50 dark:bg-slate-900/50">
+        <AppPreview />
+      </div>
     </div>
   );
 } 

@@ -28,6 +28,7 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: "/login",
+    newUser: "/dashboard", // Redirect new users to dashboard
   },
   providers: [
     CredentialsProvider({
@@ -36,7 +37,7 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         if (!credentials?.email || !credentials?.password) {
           throw new Error("Email and password required");
         }
@@ -82,6 +83,13 @@ export const authOptions: NextAuthOptions = {
         session.user.name = token.name as string;
       }
       return session;
+    },
+    async redirect({ url, baseUrl }) {
+      // Allows relative callback URLs
+      if (url.startsWith("/")) return `${baseUrl}${url}`
+      // Allows callback URLs on the same origin
+      else if (new URL(url).origin === baseUrl) return url
+      return baseUrl
     },
   },
   debug: process.env.NODE_ENV === "development",

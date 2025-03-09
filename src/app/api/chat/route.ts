@@ -101,7 +101,7 @@ Instructions:
     };
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4',
+      model: 'gpt-4o-mini',
       messages: [systemMessage, userMessage],
       temperature: 0.7,
       max_tokens: 500,

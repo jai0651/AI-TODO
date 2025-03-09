@@ -43,26 +43,28 @@ export function AuthForm({ mode }: AuthFormProps) {
           email,
           password,
           redirect: false,
+          callbackUrl: "/dashboard"
         });
 
         if (result?.error) {
           throw new Error(result.error);
         }
 
-        router.push("/dashboard");
+        router.replace("/dashboard");
       } else {
         // Login
         const result = await signIn("credentials", {
           email,
           password,
           redirect: false,
+          callbackUrl: "/dashboard"
         });
 
         if (result?.error) {
           throw new Error(result.error);
         }
 
-        router.push("/dashboard");
+        router.replace("/dashboard");
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");

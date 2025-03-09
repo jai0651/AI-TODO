@@ -12,6 +12,11 @@ export default withAuth(
   {
     callbacks: {
       authorized: ({ token, req }) => {
+        // Allow access to the home page
+        if (req.nextUrl.pathname === "/") {
+          return true;
+        }
+
         const isAuthPage = req.nextUrl.pathname.startsWith("/login") || 
                           req.nextUrl.pathname.startsWith("/signup");
         
@@ -20,7 +25,7 @@ export default withAuth(
           return true;
         }
 
-        // Require token for all other paths
+        // Require token for protected paths
         return !!token;
       },
     },
@@ -33,14 +38,11 @@ export default withAuth(
 // Specify which routes should be protected
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - api/auth (authentication routes)
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     */
-    "/((?!api/auth|_next/static|_next/image|favicon.ico|public).*)",
+    // Only protect specific routes
+    "/dashboard/:path*",
+    "/api/todos/:path*",
+    "/api/chat/:path*",
+    "/login",
+    "/signup",
   ],
-} 
+}; 
