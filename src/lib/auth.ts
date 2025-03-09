@@ -28,7 +28,7 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: "/login",
-    newUser: "/dashboard", // Redirect new users to dashboard
+    newUser: "/dashboard",
   },
   providers: [
     CredentialsProvider({
@@ -66,14 +66,17 @@ export const authOptions: NextAuthOptions = {
             name: user.name,
           };
         } catch (error) {
-          return null;
+          if (error instanceof Error) {
+            throw new Error(error.message);
+          }
+          throw new Error("Authentication failed");
         }
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user, account }) {
-      if (user) {
+    async jwt({ token, user, account, trigger }) {
+      if (trigger === "signIn" && user) {
         token.id = user.id;
         token.email = user.email;
         token.name = user.name;
@@ -89,9 +92,34 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     async redirect({ url, baseUrl }) {
-      if (url.startsWith("/")) return `${baseUrl}${url}`;
-      else if (new URL(url).origin === baseUrl) return url;
-      return baseUrl;
+      // Handle production and development URLs
+      const productionUrl = process.env.VERCEL_URL 
+        ? `https://${process.env.VERCEL_URL}` 
+        : process.env.NEXTAUTH_URL || baseUrl;
+
+      // If the URL starts with a slash, prepend the base URL
+      if (url.startsWith("/")) {
+        return `${productionUrl}${url}`;
+      }
+      
+      // If it's an absolute URL on the same origin, allow it
+      try {
+        const urlObj = new URL(url);
+        if (urlObj.origin === new URL(productionUrl).origin) {
+          return url;
+        }
+      } catch {
+        // If URL parsing fails, return to the base URL
+        return productionUrl;
+      }
+
+      // Default to the base URL
+      return productionUrl;
+    }
+  },
+  events: {
+    async signIn({ user }) {
+      // You can add any additional logic here when a user signs in
     },
   },
   debug: process.env.NODE_ENV === "development",

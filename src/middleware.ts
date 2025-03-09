@@ -10,26 +10,28 @@ export default withAuth(
     if (isAuthPage && req.nextauth.token) {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
+
+    // If user is not authenticated and trying to access protected pages, redirect to login
+    if (!isAuthPage && !req.nextauth.token) {
+      const loginUrl = new URL("/login", req.url);
+      loginUrl.searchParams.set("callbackUrl", req.nextUrl.pathname);
+      return NextResponse.redirect(loginUrl);
+    }
     
     return NextResponse.next();
   },
   {
     callbacks: {
       authorized: ({ token, req }) => {
-        // Allow access to the home page
-        if (req.nextUrl.pathname === "/") {
-          return true;
-        }
-
         const isAuthPage = req.nextUrl.pathname.startsWith("/login") || 
                           req.nextUrl.pathname.startsWith("/signup");
         
-        // Allow public paths without authentication
+        // Always allow access to auth pages
         if (isAuthPage) {
           return true;
         }
 
-        // Require token for protected paths
+        // For all other pages, require authentication
         return !!token;
       },
     },
@@ -42,9 +44,10 @@ export default withAuth(
 // Specify which routes should be protected
 export const config = {
   matcher: [
-    // Only protect specific routes
     "/dashboard/:path*",
     "/api/todos/:path*",
     "/api/chat/:path*",
+    "/login",
+    "/signup",
   ],
 }; 
