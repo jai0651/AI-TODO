@@ -93,9 +93,8 @@ export const authOptions: NextAuthOptions = {
     },
     async redirect({ url, baseUrl }) {
       // Handle production and development URLs
-      const productionUrl = process.env.VERCEL_URL 
-        ? `https://${process.env.VERCEL_URL}` 
-        : process.env.NEXTAUTH_URL || baseUrl;
+      const productionUrl = process.env.NEXTAUTH_URL || baseUrl;
+
 
       // If the URL starts with a slash, prepend the base URL
       if (url.startsWith("/")) {
