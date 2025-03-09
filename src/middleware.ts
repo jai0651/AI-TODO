@@ -14,7 +14,7 @@ export default withAuth(
         return NextResponse.redirect(new URL(callbackUrl, process.env.NEXTAUTH_URL));
 
       }
-      return NextResponse.redirect(new URL("/dashboard", req.url));
+      return NextResponse.redirect(new URL("/dashboard", process.env.NEXTAUTH_URL));
     }
 
     // If user is not authenticated and trying to access protected pages, redirect to login
@@ -53,7 +53,5 @@ export const config = {
     "/dashboard/:path*",
     "/api/todos/:path*",
     "/api/chat/:path*",
-    "/login",
-    "/signup",
   ],
 }; 
