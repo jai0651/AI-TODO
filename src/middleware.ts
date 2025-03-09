@@ -3,10 +3,14 @@ import { NextResponse } from "next/server";
 
 export default withAuth(
   function middleware(req) {
+    const isAuthPage = req.nextUrl.pathname.startsWith("/login") || 
+                      req.nextUrl.pathname.startsWith("/signup");
+    
     // If user is authenticated and trying to access auth pages, redirect to dashboard
-    if (req.nextUrl.pathname.startsWith("/login") || req.nextUrl.pathname.startsWith("/signup")) {
+    if (isAuthPage && req.nextauth.token) {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
+    
     return NextResponse.next();
   },
   {
@@ -42,7 +46,5 @@ export const config = {
     "/dashboard/:path*",
     "/api/todos/:path*",
     "/api/chat/:path*",
-    "/login",
-    "/signup",
   ],
 }; 

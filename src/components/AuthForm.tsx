@@ -33,8 +33,9 @@ export function AuthForm({ mode }: AuthFormProps) {
           body: JSON.stringify({ email, password, name }),
         });
 
+        const data = await res.json();
+
         if (!res.ok) {
-          const data = await res.json();
           throw new Error(data.error || "Failed to sign up");
         }
 
@@ -47,7 +48,7 @@ export function AuthForm({ mode }: AuthFormProps) {
         });
 
         if (result?.error) {
-          throw new Error(result.error);
+          throw new Error("Login failed after signup: " + result.error);
         }
 
         router.replace("/dashboard");
@@ -67,7 +68,8 @@ export function AuthForm({ mode }: AuthFormProps) {
         router.replace("/dashboard");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "An error occurred");
+      console.error("Auth error:", err);
+      setError(err instanceof Error ? err.message : "An unexpected error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -121,9 +123,15 @@ export function AuthForm({ mode }: AuthFormProps) {
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-red-500 dark:text-red-400 text-sm bg-red-50 dark:bg-red-900/30 p-3 rounded-lg"
+            transition={{ duration: 0.3 }}
+            className="text-red-500 dark:text-red-400 text-sm font-medium bg-red-50 dark:bg-red-900/30 p-4 rounded-lg border border-red-200 dark:border-red-800 shadow-sm"
           >
-            {error}
+            <div className="flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              {error}
+            </div>
           </motion.div>
         )}
         <motion.button
