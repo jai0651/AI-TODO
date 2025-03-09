@@ -11,7 +11,8 @@ export default withAuth(
       // Check if there's a callback URL in the query parameters
       const callbackUrl = req.nextUrl.searchParams.get("callbackUrl");
       if (callbackUrl && callbackUrl.startsWith("/")) {
-        return NextResponse.redirect(new URL(callbackUrl, req.url));
+        return NextResponse.redirect(new URL(callbackUrl, process.env.NEXTAUTH_URL));
+
       }
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
