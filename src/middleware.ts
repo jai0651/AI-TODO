@@ -8,6 +8,11 @@ export default withAuth(
     
     // If user is authenticated and trying to access auth pages, redirect to dashboard
     if (isAuthPage && req.nextauth.token) {
+      // Check if there's a callback URL in the query parameters
+      const callbackUrl = req.nextUrl.searchParams.get("callbackUrl");
+      if (callbackUrl && callbackUrl.startsWith("/")) {
+        return NextResponse.redirect(new URL(callbackUrl, req.url));
+      }
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
 
@@ -26,7 +31,7 @@ export default withAuth(
         const isAuthPage = req.nextUrl.pathname.startsWith("/login") || 
                           req.nextUrl.pathname.startsWith("/signup");
         
-        // Always allow access to auth pages
+        // Allow access to auth pages without a token
         if (isAuthPage) {
           return true;
         }

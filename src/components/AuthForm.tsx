@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 
 interface AuthFormProps {
@@ -11,6 +11,7 @@ interface AuthFormProps {
 
 export function AuthForm({ mode }: AuthFormProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState(false);
 
@@ -23,6 +24,9 @@ export function AuthForm({ mode }: AuthFormProps) {
     const email = formData.get("email") as string;
     const password = formData.get("password") as string;
     const name = formData.get("name") as string;
+
+    // Get the callback URL from the URL parameters or default to dashboard
+    const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
 
     try {
       if (mode === "signup") {
@@ -41,28 +45,43 @@ export function AuthForm({ mode }: AuthFormProps) {
         
         // After successful signup, log them in
         const result = await signIn("credentials", {
-          redirect: true,
           email,
           password,
-          callbackUrl: "/dashboard"
+          callbackUrl,
+          redirect: false,
         });
 
-        // This code will only run if redirect is false or fails
         if (result?.error) {
           setError("Account created successfully. Please login with your credentials.");
           setTimeout(() => {
             router.push("/login");
           }, 2000);
+          return;
+        }
+
+        // Manually handle the redirect
+        if (result?.url) {
+          router.push(result.url);
         }
       } else {
         // Login
-        await signIn("credentials", {
-          redirect: true,
+        const result = await signIn("credentials", {
           email,
           password,
-          callbackUrl: "/dashboard"
+          callbackUrl,
+          redirect: false,
         });
-        // The page will be redirected automatically if successful
+
+        if (result?.error) {
+          throw new Error(result.error === "CredentialsSignin" 
+            ? "Invalid email or password" 
+            : result.error);
+        }
+
+        // Manually handle the redirect
+        if (result?.url) {
+          router.push(result.url);
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unexpected error occurred. Please try again.");
